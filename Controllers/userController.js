@@ -101,7 +101,7 @@ const login = async (req, res)=>{
     
 }
 
-const forgotPassword = () => {
+const forgotPassword = (res, req) => {
     const {email} = req.body
 
     if (!email) {

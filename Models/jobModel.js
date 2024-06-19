@@ -18,7 +18,7 @@ const jobSchema = new mongoose.Schema({
         },
 
         vacancies: {
-            type : String,
+            type : Number,
             // enum: ['Full time' , 'Part time' , 'Internship'],
             require : [true, 'Vacancy is required']
         },
@@ -42,6 +42,11 @@ const jobSchema = new mongoose.Schema({
         requirement : {
             type : String,
             require : [true, 'Requirement is required']
+        },
+        email : {
+            type : String,
+            require : [true, 'Email is required'],
+            // unique : true
         },
         timestamp : {type: Date, default : Date.now}       
 

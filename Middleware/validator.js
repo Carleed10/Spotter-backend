@@ -1,4 +1,6 @@
 const yup = require ('yup')
+// const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[]/
+
 
 const validateUser = (schema) => (req, res, next) => {
     try {
@@ -9,6 +11,7 @@ const validateUser = (schema) => (req, res, next) => {
         res.status(400).send({message: 'error while validating' , error})
     }
 }
+
 
 const validateSchema = yup.object().shape({
     userName : yup.string().required(true, 'Username is required').min(4, "Username must be at least four letters"),

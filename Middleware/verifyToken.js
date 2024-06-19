@@ -6,6 +6,7 @@ const verifyToken = async (req, res, next) => {
     console.log(authHeader);
     if (!authHeader) {
         res.status(400).send({message : 'Authorisation not provided'})
+        // console.log(error);
     }else if(!authHeader.startsWith("Bearer")){
         res.status(400).send({message : "Validation error"})
     }
