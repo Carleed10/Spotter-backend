@@ -1,4 +1,6 @@
 const mongoose = require('mongoose')
+const { Schema } = require('yup')
+const userModel = require('./userModel')
 
 const jobSchema = new mongoose.Schema({
         jobTitle: {
@@ -19,7 +21,6 @@ const jobSchema = new mongoose.Schema({
 
         vacancies: {
             type : Number,
-            // enum: ['Full time' , 'Part time' , 'Internship'],
             require : [true, 'Vacancy is required']
         },
 
@@ -48,6 +49,12 @@ const jobSchema = new mongoose.Schema({
             require : [true, 'Email is required'],
             // unique : true
         },
+        applicants: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'userSchema'
+          }],
+
+
         timestamp : {type: Date, default : Date.now}       
 
 }, {timestamps : true})

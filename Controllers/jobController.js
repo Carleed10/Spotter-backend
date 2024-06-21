@@ -117,7 +117,8 @@ const createdJob = async (req, res) => {
                 if (!created) {
                     res.status(404).send({message : "Unable to find job"})
                 } else {
-                    const createdJob = await jobModel.find({email})
+                    const createdJob = await jobModel.find({email}) .populate("email", "userName")
+                    .populate("applicants", "userName");              
                     if (!createdJob) {
                     res.status(404).send({message : "Unable to get created jobs"})
                     } else {
@@ -150,11 +151,16 @@ const applyJob = async (req, res) => {
                 if (!id) {
                   res.status(400).send({message:'id is not provided'})
                 } else {
-                    const jobApplication = await jobModel.findById(id)
+                    const jobApplication = await jobModel.findByIdAndUpdate(
+                        id,
+                        { applicants: apply._id } ,
+                        { new: true}
+                    )
                 if (!jobApplication) {
                     res.status(400).send({message : "Unable to apply for job"})
                     console.log(error);
                 } else {
+                    
                     try {
                         res.status(200).send({message : "Job applied for successfully", status:"okay", jobApplication})
                     } catch (error) {
@@ -170,6 +176,7 @@ const applyJob = async (req, res) => {
         }
     }
 }
+
 const appliedJob = async (req, res) => {
     const user = req.user.email
     console.log(user);
@@ -179,12 +186,12 @@ const appliedJob = async (req, res) => {
     } else {
         try {
             const {email} = req.user
-        const created =  await userModel.findOne({email})
-        // console.log(created);
-            if (!created) {
+            const applied =  await userModel.findOne({email})
+        // console.log(applied);
+            if (!applied) {
                 res.status(404).send({message : "Unable to find job"})
             } else {
-                const appliedJobs = await jobModel.find({email})
+                const appliedJobs = await jobModel.find({applicants: applied._id})
                 if (!appliedJobs) {
                 res.status(404).send({message : "Unable to get applied jobs"})
                 } else {
@@ -199,6 +206,53 @@ const appliedJob = async (req, res) => {
     }
 
 }
+
+const applicants = async (req, res) => {
+    const user = req.user.email
+    console.log(user);
+
+    if (!user) {
+        res.status(400).send({message : 'Authorisation not provided'})
+    } else {
+        try {
+            const {email} = req.user
+        const created =  await userModel.findOne({email})
+            if (!created) {
+                res.status(404).send({message : "Unable to find job"})
+            } else {
+                const createdJob = await jobModel.find({email}) .populate("email", "userName")
+                .populate("applicants", "userName");              
+                if (!createdJob) {
+                res.status(404).send({message : "Unable to get created jobs"})
+                } else {
+                    const id = req.params.id
+
+                    if (!id) {
+                             res.status(404).send({message : "Unable to get id"})
+                        
+                    } else {
+                         const appli = await jobModel.findById(id).populate('applicants', 'userName');
+                         if (!appli) {
+                            res.status(404).send({message : "Unable to get applicants"})
+                            
+                         } else {
+                            res.status(200).send({message : "Applicants gotten successfully", appli})
+                            
+                         }
+                        
+                    }
+
+                }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
+
+}
+
 
 const deleteJob = async (req, res) =>{
     const user = req.user.email
@@ -231,7 +285,83 @@ const deleteJob = async (req, res) =>{
 
 
 
+const acceptApplicants = async (req, res) => {
+    const user =  req.user.email
+    console.log(user);
+    const id = req.params.id
+    const { applicantId } = req.params;
 
-module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob}
+    if (!user) {
+        res.status(400).send({message : 'User not found'})
+    } else {
+        try {
+            const {email} = req.user
+            const accept =  await userModel.findOne({email})
+            if (!accept) {
+                res.status(404).send({message : "Not authorised to accept applicant"})
+            } else {
+                const job = await jobModel.findById(id).populate('applicants', 'userName');
+                if (!job) {
+                    res.status(404).send({message : "Unable to find job"})
+                    
+                 } else {
+
+                // const appliedJobs = await jobModel.find({applicants: applied._id})
+
+                    const applicant = await jobModel.find({applicants: job._id})
+
+                    if (!applicant) {
+                    res.status(404).send({message : "Applicants not found for this job"})
+                        
+                    }else{
+                    res.status(200).send({message : "Applicants accepted successfully"})
+                        
+                    }
+
+
+                    
+                 }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
+}
+
+const declineApplicants = async (req, res) => {
+    const user =  req.user.email
+    console.log(user);
+
+    if (!user) {
+        res.status(400).send({message : 'Authorisation not provided'})
+    } else {
+        try {
+            const {email} = req.user
+        const created =  await userModel.findOne({email})
+            if (!created) {
+                res.status(404).send({message : "Not eligible to delete job"})
+            } else {
+                const id = req.params.id
+                const deleteJob = await jobModel.findByIdAndDelete(id)
+                if (!deleteJob) {
+                res.status(404).send({message : "Unable to delete job"})
+                } else {
+                    res.status(200).send({message : "Job deleted Successfully", deleteJob})
+                }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
+}
+
+
+
+
+module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, acceptApplicants, declineApplicants}
 
 
