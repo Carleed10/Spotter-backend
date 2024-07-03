@@ -1,5 +1,5 @@
 const express = require('express')
-const { jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, acceptApplicants } = require('../Controllers/jobController')
+const { jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, acceptApplicants, declineApplicants } = require('../Controllers/jobController')
 const verifyToken = require('../Middleware/verifyToken')
 
 
@@ -14,9 +14,7 @@ jobRouter.get('/applicants/:id', verifyToken, applicants)
 jobRouter.post('/applyJob/:id', verifyToken, applyJob)
 jobRouter.post('/deleteJob/:id', verifyToken, deleteJob)
 jobRouter.post('/acceptApplicant/:id', verifyToken, acceptApplicants)
-
-
-
+jobRouter.post('/declineApplicant/:id', verifyToken, declineApplicants)
 
 
 

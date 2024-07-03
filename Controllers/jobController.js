@@ -1,6 +1,7 @@
 const jobModel = require("../Models/jobModel")
 const userModel = require("../Models/userModel")
 
+
 const jobController = async (req, res) => {
     const user = req.user
 
@@ -153,7 +154,7 @@ const applyJob = async (req, res) => {
                 } else {
                     const jobApplication = await jobModel.findByIdAndUpdate(
                         id,
-                        { applicants: apply._id } ,
+                        { $push: { applicants: { userId: apply._id} } },
                         { new: true}
                     )
                 if (!jobApplication) {
@@ -191,7 +192,8 @@ const appliedJob = async (req, res) => {
             if (!applied) {
                 res.status(404).send({message : "Unable to find job"})
             } else {
-                const appliedJobs = await jobModel.find({applicants: applied._id})
+                const appliedJobs = await jobModel.find({ 'applicants.userId': applied._id }).populate("applicants.userId", "username")
+                console.log(appliedJobs);
                 if (!appliedJobs) {
                 res.status(404).send({message : "Unable to get applied jobs"})
                 } else {
@@ -220,8 +222,7 @@ const applicants = async (req, res) => {
             if (!created) {
                 res.status(404).send({message : "Unable to find job"})
             } else {
-                const createdJob = await jobModel.find({email}) .populate("email", "userName")
-                .populate("applicants", "userName");              
+                const createdJob = await jobModel.find({email})      
                 if (!createdJob) {
                 res.status(404).send({message : "Unable to get created jobs"})
                 } else {
@@ -231,7 +232,8 @@ const applicants = async (req, res) => {
                              res.status(404).send({message : "Unable to get id"})
                         
                     } else {
-                         const appli = await jobModel.findById(id).populate('applicants', 'userName');
+                         const appli = await jobModel.findById(id).populate('applicants.userId', "userName")
+                         console.log(appli);
                          if (!appli) {
                             res.status(404).send({message : "Unable to get applicants"})
                             
@@ -288,8 +290,9 @@ const deleteJob = async (req, res) =>{
 const acceptApplicants = async (req, res) => {
     const user =  req.user.email
     console.log(user);
+    const {applicantId}  = req.body
     const id = req.params.id
-    const { applicantId } = req.params;
+
 
     if (!user) {
         res.status(400).send({message : 'User not found'})
@@ -300,27 +303,23 @@ const acceptApplicants = async (req, res) => {
             if (!accept) {
                 res.status(404).send({message : "Not authorised to accept applicant"})
             } else {
-                const job = await jobModel.findById(id).populate('applicants', 'userName');
-                if (!job) {
-                    res.status(404).send({message : "Unable to find job"})
-                    
-                 } else {
 
-                // const appliedJobs = await jobModel.find({applicants: applied._id})
+                // const appliedJob = await jobModel.findOneAndUpdate({applicants: appli._id})
 
-                    const applicant = await jobModel.find({applicants: job._id})
+                    const applicant = await jobModel.findOneAndUpdate(
+                        { _id: id, 'applicants.userId': applicantId },
+                        { $set: { 'applicants.$.accepted': true }},
+                        {new: true}
+                    )
+                    console.log(applicant);
 
                     if (!applicant) {
-                    res.status(404).send({message : "Applicants not found for this job"})
+                    res.status(404).send({message : "Applicant not found for this job"})
                         
                     }else{
-                    res.status(200).send({message : "Applicants accepted successfully"})
+                    res.status(200).send({message : "Applicant accepted successfully"})
                         
                     }
-
-
-                    
-                 }
                 
             }
         } catch (error) {
@@ -333,23 +332,34 @@ const acceptApplicants = async (req, res) => {
 const declineApplicants = async (req, res) => {
     const user =  req.user.email
     console.log(user);
+    const {applicantId}  = req.body
+    const id = req.params.id
+
 
     if (!user) {
-        res.status(400).send({message : 'Authorisation not provided'})
+        res.status(400).send({message : 'User not found'})
     } else {
         try {
             const {email} = req.user
-        const created =  await userModel.findOne({email})
-            if (!created) {
-                res.status(404).send({message : "Not eligible to delete job"})
+            const accept =  await userModel.findOne({email})
+            if (!accept) {
+                res.status(404).send({message : "Not authorised to accept applicant"})
             } else {
-                const id = req.params.id
-                const deleteJob = await jobModel.findByIdAndDelete(id)
-                if (!deleteJob) {
-                res.status(404).send({message : "Unable to delete job"})
-                } else {
-                    res.status(200).send({message : "Job deleted Successfully", deleteJob})
-                }
+
+                    const applicant = await jobModel.findOneAndUpdate(
+                        { _id: id, 'applicants.userId': applicantId },
+                        { $set: { 'applicants.$.accepted': false }},
+                        {new: false}
+                    )
+                    console.log(applicant);
+
+                    if (!applicant) {
+                    res.status(404).send({message : "Applicant not found for this job"})
+                        
+                    }else{
+                    res.status(200).send({message : "Applicant declined successfully"})
+                        
+                    }
                 
             }
         } catch (error) {
@@ -358,6 +368,7 @@ const declineApplicants = async (req, res) => {
         }
     }
 }
+
 
 
 

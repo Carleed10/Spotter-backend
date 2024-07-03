@@ -50,10 +50,17 @@ const jobSchema = new mongoose.Schema({
             // unique : true
         },
         applicants: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'userSchema'
-          }],
-
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'userSchema',
+                required: true
+            },
+            accepted: {
+                type: Boolean,
+                default: false
+            }
+        }],
+          
 
         timestamp : {type: Date, default : Date.now}       
 

@@ -37,7 +37,7 @@ const signUp = async (req, res)=>{
                 res.status(402).send({message : 'Email already in use'})
             }
             else{
-                const hashedPassword = await bcryptjs.hash(password, 7)
+                const hashedPassword = await bcryptjs.hash(password, 5)
                 const createUser = await userModel.create({
                     userName,
                     email,
@@ -101,8 +101,9 @@ const login = async (req, res)=>{
     
 }
 
-const forgotPassword = (res, req) => {
+const forgotPassword = (req, res) => {
     const {email} = req.body
+    console.log(req.body);
 
     if (!email) {
         res.status(400).send({message : "Email is required"})
