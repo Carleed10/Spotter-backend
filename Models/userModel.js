@@ -28,13 +28,17 @@ const userSchema = new mongoose.Schema({
     
     jobType: {
         type : String,
-        enum: ['Full time' , 'Part time' , 'Internship']
+        enum: ['Full-time' , 'Part-time' , 'Internship']
         // require : [true, 'Jobtitle is required']
     },
     jobCategory : {
         type : String,
         enum: ['Software Development' , 'Data Processing', 'Cloud Computing' , 'Networking', 'Web Development', 'Game Development', 'Database Management', 'Emerging Technologies', 'Product Management', 'IT Consulting', 'IT Governance and Compliance', 'Telecommunications', 'Cloud Computing', 'Ghostwriting', '', 'Database Management', 'Public Relations', 'Copywriting']
         // require : [true, 'Jobtitle is required']
+    },
+    jobTitle : {
+        type : String,
+        // require : [true, 'Lastname is required']
     },
     education : {
         type : String,
@@ -77,6 +81,7 @@ const userSchema = new mongoose.Schema({
         require : [true, 'Linked in account is required'],
         // unique : true
     },
+    otp: { type: String, required: true }
 })
 
 

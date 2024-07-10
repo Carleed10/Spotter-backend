@@ -1,18 +1,22 @@
 const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const userModel = require("../Models/userModel")
+const { Signupmail } = require('../Utils/Signupmail')
+const { Deletemail } = require('../Utils/Deletemail')
+const crypto = require('crypto')
+const { Otpmail } = require('../Utils/Otpmail')
 
 
-const genRandom = () => {
-    let otp = ""
+// const genRandom = () => {
+//     let otp = ""
 
-    for (let index = 0; index < 6; index++) {
-        const randomNumber = Math.floor(Math.random() *7)
-        otp += randomNumber
-    }
-    return otp
-    // console.log(randomNumber);
-}
+//     for (let index = 0; index < 6; index++) {
+//         const randomNumber = Math.floor(Math.random() *7)
+//         otp += randomNumber
+//     }
+//     return otp
+
+// }
 
 const signUp = async (req, res)=>{
     const {userName, email, password} = req.body
@@ -47,6 +51,7 @@ const signUp = async (req, res)=>{
                 if (!createUser) {
                     res.status(409).send({message : 'Unable to create user', status : false})
                 } else {
+                    await Signupmail(userName, email)
                     res.status(200).send({message : 'User created successfully', status:true})
                     console.log("Created user :", createUser);
                 }
@@ -63,7 +68,7 @@ const signUp = async (req, res)=>{
 
 
 const login = async (req, res)=>{
-    const{email, password} = req.body
+    const{email, userName, password} = req.body
 
     if (!email, !password) {
         res.status(400).send({message : 'All fields are mandatory'})
@@ -87,6 +92,7 @@ const login = async (req, res)=>{
                         expiresIn : '1d'
                     }
                 )
+
                 res.status(200).send({message : 'Login successful', genToken, status : 'success', Username : findUser.userName})
 
                 }
@@ -96,12 +102,13 @@ const login = async (req, res)=>{
         } catch (error) {
             res.status(400).send({message : 'Internal server error'})
             console.log('Login error, pls try again later');
+            console.log(error);
         }
     }
     
 }
 
-const forgotPassword = (req, res) => {
+const forgotPassword = async (req, res) => {
     const {email} = req.body
     console.log(req.body);
 
@@ -109,18 +116,46 @@ const forgotPassword = (req, res) => {
         res.status(400).send({message : "Email is required"})
     } else {
         try {
-            const validateEmail = userModel.findOne({email})
+            const validateEmail = await userModel.findOne({email})
+            const userName = validateEmail.userName
 
             if (!validateEmail) {
                 res.status(400).send({message : "User doesn't exist, please sign up"})
             } else {
-                let userOtp = genRandom()
-                res.status(200).send({message : "OTP sent successfully", userOtp})                
-            }
+                const otps = await crypto.randomBytes(3)
+                const userOtp = otps.toString("hex")
+
+                await Otpmail(userName, userOtp, email, )
+                res.status(200).send({message : "OTP sent successfully", userOtp})     
+        }
 
         } catch (error) {
             res.status(500).send({message:"internal server error"})  
             console.log(error);
+        }
+    }
+
+}
+
+const getOtp = async (req, res) => {
+    const user = req.user
+    if (!user) {
+        res.status(400).send({message : "Authorization error"})
+    } else {
+        const {email} = user
+        try {
+            const users = await userModel.findOne({email})
+            if (!users) {
+            res.status(400).send({message : "Unable to get information"})
+                
+            } else {
+                const findOtp= await userModel.findOne({email})
+                res.status(200).send({message : "OTP fetched successfully", status:"okay", findOtp})
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            
         }
     }
 
@@ -172,6 +207,7 @@ const deleteAccount = async (req, res) =>{
             const findUser = await userModel.findOneAndDelete({email})
 
             if (findUser) {
+                await Deletemail(userName, email)
                 res.status(200).send({message : 'Account deleted successfully'})
                 console.log('Deleted user : ',  findUser);
             }else{
@@ -191,14 +227,14 @@ const profile = async (req, res) => {
     console.log(user.email);
     const {email} = user
 
-    const {firstname, lastname, jobType, jobCategory, education, about} = req.body
+    const {firstName, lastName, jobTitle, jobType, jobCategory, education, about, facebook, x, linkedIn, instagram, city, country, fullAddress} = req.body
     
-    if (!firstname, !lastname, !jobType, !jobCategory, !education, !about) {
+    if (!firstName, !lastName, !jobType, !jobTitle, !jobCategory, !education, !about, !facebook, !x, !linkedIn, !instagram, !city, !country, !fullAddress) {
         res.status(400).send({message : 'All fields are mandatory'})
     }else{
         try {
             const profileForm = await userModel.findOneAndUpdate({email}, { 
-              $set : {firstName : firstname , lastName : lastname, jobType : jobType, jobCategory : jobCategory, education : education, about : about}
+              $set : {firstName : firstName , lastName : lastName, jobType : jobType, jobTitle : jobTitle, jobCategory : jobCategory, education : education, about : about, facebook : facebook, x : x, linkedIn : linkedIn , instagram : instagram, city : city, country : country, fullAddress : fullAddress}
             }, {new : true})
             if (!profileForm) {
                 res.status(400).send({message : "Unable to update profile"})
@@ -212,56 +248,79 @@ const profile = async (req, res) => {
     }
 }
 
-const address = async (req, res) => {
+const getProfile = async (req, res) => {
     const user = req.user
-    const {email} = user
-
-    const {city, country, fullAddress} = req.body
-    if (!city, !country, !fullAddress) {
-        res.status(400).send({message : 'All fields are mandatory'})
+    if (!user) {
+        res.status(400).send({message : "Authorization error"})
     } else {
+        const {email} = user
         try {
-            const socialForm = await userModel.findOneAndUpdate({email}, {
-                $set : {city : city, country : country, fullAddress : fullAddress}
-            }, {new : true})
-
-            if (!socialForm) {
-                res.status(400).send({message : 'Unable to update profile'})
+            const users = await userModel.findOne({email})
+            if (!users) {
+            res.status(400).send({message : "Unable to get information"})
+                
             } else {
-                res.status(200).send({message : 'Profile updated successfully'})
+                const findProfile= await userModel.findOne({email})
+                res.status(200).send({message : "User information fetched successfully", status:"okay", findProfile})
+                
             }
         } catch (error) {
-            res.status(500).send({message : 'Internal server error'})
+            res.status(500).send({message : "Internal server error"})
             
         }
     }
 }
 
-const social = async (req, res) => {
-    const user = req.user
-    const {email} = user
+// const address = async (req, res) => {
+//     const user = req.user
+//     const {email} = user
 
-    const {facebook, x, linkedIn, instagram} = req.body
-    if (!facebook, !x, !linkedIn, !instagram) {
-        res.status(400).send({message : 'All fields are mandatory'})
-    } else {
-        try {
-            const socialForm = await userModel.findOneAndUpdate({email}, {
-                $set : {facebook : facebook, x : x, linkedIn : linkedIn , instagram : instagram}
-            }, {new : true})
+//     const {city, country, fullAddress} = req.body
+//     if (!city, !country, !fullAddress) {
+//         res.status(400).send({message : 'All fields are mandatory'})
+//     } else {
+//         try {
+//             const addressForm = await userModel.findOneAndUpdate({email}, {
+//                 $set : {city : city, country : country, fullAddress : fullAddress}
+//             }, {new : true})
 
-            if (!socialForm) {
-                res.status(400).send({message : 'Unable to update profile'})
-            } else {
-                res.status(200).send({message : 'Profile updated successfully'})
-            }
-        } catch (error) {
-            res.status(500).send({message : 'Internal server error'})
+//             if (!addressForm) {
+//                 res.status(400).send({message : 'Unable to update profile'})
+//             } else {
+//                 res.status(200).send({message : 'Profile updated successfully'})
+//             }
+//         } catch (error) {
+//             res.status(500).send({message : 'Internal server error'})
             
-        }
-    }
-}
+//         }
+//     }
+// }
+
+// const social = async (req, res) => {
+//     const user = req.user
+//     const {email} = user
+
+//     const {facebook, x, linkedIn, instagram} = req.body
+//     if (!facebook, !x, !linkedIn, !instagram) {
+//         res.status(400).send({message : 'All fields are mandatory'})
+//     } else {
+//         try {
+//             const socialForm = await userModel.findOneAndUpdate({email}, {
+//                 $set : {facebook : facebook, x : x, linkedIn : linkedIn , instagram : instagram}
+//             }, {new : true})
+
+//             if (!socialForm) {
+//                 res.status(400).send({message : 'Unable to update profile'})
+//             } else {
+//                 res.status(200).send({message : 'Profile updated successfully'})
+//             }
+//         } catch (error) {
+//             res.status(500).send({message : 'Internal server error'})
+            
+//         }
+//     }
+// }
 
 
 
-module.exports = {signUp, login, deleteAccount, profile, social, address, forgotPassword, editPassword}
+module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, getProfile}

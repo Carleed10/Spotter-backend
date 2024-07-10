@@ -232,7 +232,7 @@ const applicants = async (req, res) => {
                              res.status(404).send({message : "Unable to get id"})
                         
                     } else {
-                         const appli = await jobModel.findById(id).populate('applicants.userId', "userName")
+                         const appli = await jobModel.findById(id).populate('applicants.userId', "userName firstName lastName jobTitle")
                          console.log(appli);
                          if (!appli) {
                             res.status(404).send({message : "Unable to get applicants"})
@@ -253,6 +253,53 @@ const applicants = async (req, res) => {
         }
     }
 
+}
+
+const applicantsProfile = async (req, res) => {
+    const user = req.user.email
+    console.log(user);
+    // const {applicantId}  = req.body
+    
+
+    if (!user) {
+        res.status(400).send({message : 'Authorisation not provided'})
+    } else {
+        try {
+            const {email} = req.user
+        const created =  await userModel.findOne({email})
+            if (!created) {
+                res.status(404).send({message : "Unable to get user"})
+            } else {
+                const createdJob = await jobModel.find({email})      
+                if (!createdJob) {
+                res.status(404).send({message : "Unable to get created jobs"})
+                } else {
+                    const id = req.params.id
+
+                    if (!id) {
+                             res.status(404).send({message : "Unable to get id"})
+                        
+                    } else {
+                         const applicantProfile = await userModel.findById({_id: id})
+                         console.log(applicantProfile);
+                         if (!applicantProfile) {
+                            res.status(404).send({message : "Unable to get applicant profile"})
+                            
+                         } else {
+                            res.status(200).send({message : "Applicants gotten successfully", applicantProfile})
+                            
+                         }
+                        
+                    }
+
+                }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
 }
 
 
@@ -304,7 +351,7 @@ const acceptApplicants = async (req, res) => {
                 res.status(404).send({message : "Not authorised to accept applicant"})
             } else {
 
-                // const appliedJob = await jobModel.findOneAndUpdate({applicants: appli._id})
+                
 
                     const applicant = await jobModel.findOneAndUpdate(
                         { _id: id, 'applicants.userId': applicantId },
@@ -373,6 +420,6 @@ const declineApplicants = async (req, res) => {
 
 
 
-module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, acceptApplicants, declineApplicants}
+module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, applicantsProfile, acceptApplicants, declineApplicants}
 
 

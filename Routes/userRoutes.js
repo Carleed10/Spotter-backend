@@ -1,5 +1,5 @@
 const express = require('express')
-const { signUp, login, deleteAccount, editPassword, forgotPassword, profile, social} = require('../Controllers/userController')
+const { signUp, login, deleteAccount, editPassword, forgotPassword, profile, social, address, getProfile, verifyOtp} = require('../Controllers/userController')
 const { validateUser, validateSchema, validateLoginSchema } = require('../Middleware/validator')
 const verifyToken = require('../Middleware/verifyToken')
 
@@ -13,9 +13,14 @@ userRouter.post('/deleteAccount', verifyToken, deleteAccount)
 // userRouter.post('/delete', verifyToken, deleteAccount)
 userRouter.post('/edit', verifyToken, editPassword)
 userRouter.post('/profile', verifyToken, profile)
-userRouter.post('/social', verifyToken, social)
+// userRouter.post('/social', verifyToken, social)
+// userRouter.post('/address', verifyToken, address)
+userRouter.get('/getProfile', verifyToken, getProfile)
 
-userRouter.post('/forgotPassword', verifyToken, forgotPassword)
+
+userRouter.post('/forgotPassword', forgotPassword)
+// userRouter.post('/verifyOtp', verifyOtp)
+
 
 
 
