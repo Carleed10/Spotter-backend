@@ -124,6 +124,13 @@ const forgotPassword = async (req, res) => {
             } else {
                 const otps = await crypto.randomBytes(3)
                 const userOtp = otps.toString("hex")
+                const otpExpiresAt = Date.now() + 60 * 1000;
+
+                validateEmail.resetOtp = {
+                    code: userOtp,
+                    expiresAt: otpExpiresAt
+                };
+                await validateEmail.save();
 
                 await Otpmail(userName, userOtp, email, )
                 res.status(200).send({message : "OTP sent successfully", userOtp})     
@@ -137,29 +144,65 @@ const forgotPassword = async (req, res) => {
 
 }
 
-const getOtp = async (req, res) => {
-    const user = req.user
-    if (!user) {
-        res.status(400).send({message : "Authorization error"})
-    } else {
-        const {email} = user
-        try {
-            const users = await userModel.findOne({email})
-            if (!users) {
-            res.status(400).send({message : "Unable to get information"})
-                
-            } else {
-                const findOtp= await userModel.findOne({email})
-                res.status(200).send({message : "OTP fetched successfully", status:"okay", findOtp})
-                
-            }
-        } catch (error) {
-            res.status(500).send({message : "Internal server error"})
-            
-        }
+const verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return res.status(400).send({ message: "Email and OTP are required" });
     }
 
-}
+    try {
+        const user = await userModel.findOne({ email });
+
+        if (!user || !user.resetOtp) {
+            return res.status(400).send({ message: "Invalid request" });
+        }
+
+        const { code, expiresAt } = user.resetOtp;
+
+        if (Date.now() > expiresAt) {
+            return res.status(400).send({ message: "OTP has expired, generate a new one" });
+        }
+
+        if (code !== otp) {
+            return res.status(400).send({ message: "Invalid OTP" });
+        }
+
+        // OTP is valid, proceed with password reset or other actions
+        res.status(200).send({ message: "OTP verified successfully" });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Internal server error" });
+    }
+};
+
+// module.exports = verifyOtp;
+
+
+// const getOtp = async (req, res) => {
+//     const user = req.user
+//     if (!user) {
+//         res.status(400).send({message : "Authorization error"})
+//     } else {
+//         const {email} = user
+//         try {
+//             const users = await userModel.findOne({email})
+//             if (!users) {
+//             res.status(400).send({message : "Unable to get information"})
+                
+//             } else {
+//                 const findOtp= await userModel.findOne({email})
+//                 res.status(200).send({message : "OTP fetched successfully", status:"okay", findOtp})
+                
+//             }
+//         } catch (error) {
+//             res.status(500).send({message : "Internal server error"})
+            
+//         }
+//     }
+
+// }
 
 const editPassword = async (req, res) => {
     const user = req.user
@@ -323,4 +366,4 @@ const getProfile = async (req, res) => {
 
 
 
-module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, getProfile}
+module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, verifyOtp, getProfile}

@@ -81,7 +81,14 @@ const userSchema = new mongoose.Schema({
         require : [true, 'Linked in account is required'],
         // unique : true
     },
-    otp: { type: String, required: true }
+    otp: { 
+        type: String,
+        require: true
+    },
+    resetOtp: {
+        code: { type: String },
+        expiresAt: { type: Date }
+    }
 })
 
 

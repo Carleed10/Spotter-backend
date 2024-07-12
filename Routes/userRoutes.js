@@ -19,6 +19,8 @@ userRouter.get('/getProfile', verifyToken, getProfile)
 
 
 userRouter.post('/forgotPassword', forgotPassword)
+userRouter.post('/verifyOtp', verifyOtp)
+
 // userRouter.post('/verifyOtp', verifyOtp)
 
 
