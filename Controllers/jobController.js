@@ -157,15 +157,24 @@ const applyJob = async (req, res) => {
                         { $push: { applicants: { userId: apply._id} } },
                         { new: true}
                     )
+                const userId = apply._id
+                console.log(userId);
                 if (!jobApplication) {
                     res.status(400).send({message : "Unable to apply for job"})
                     console.log(error);
                 } else {
-                    
                     try {
+                        if (jobApplication.applicants.length >= jobApplication.vacancies) {
+                            return res.status(404).send({ message: 'Job vacancy is full, cannot apply' });
+                        }else if (jobApplication.applicants.map(applicant => applicant.toString()).includes(userId.toString())) {
+                            return res.status(402).send({ message: 'You have already applied for this job' });
+                        }else{
                         res.status(200).send({message : "Job applied for successfully", status:"okay", jobApplication})
+
+                        }
+
                     } catch (error) {
-                        console.log(error);''
+                        console.log(error);
                         res.status(500).send({message : "Internal server error"})
                     }
                 }

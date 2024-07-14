@@ -161,7 +161,7 @@ const verifyOtp = async (req, res) => {
         const { code, expiresAt } = user.resetOtp;
 
         if (Date.now() > expiresAt) {
-            return res.status(400).send({ message: "OTP has expired, generate a new one" });
+            return res.status(400).send({ message: "OTP has expired, generate a new one", status : 'false' });
         }
 
         if (code !== otp) {
@@ -169,7 +169,7 @@ const verifyOtp = async (req, res) => {
         }
 
         // OTP is valid, proceed with password reset or other actions
-        res.status(200).send({ message: "OTP verified successfully" });
+        res.status(200).send({ message: "OTP verified successfully", status : 'true' });
 
     } catch (error) {
         console.log(error);
@@ -177,49 +177,17 @@ const verifyOtp = async (req, res) => {
     }
 };
 
-// module.exports = verifyOtp;
-
-
-// const getOtp = async (req, res) => {
-//     const user = req.user
-//     if (!user) {
-//         res.status(400).send({message : "Authorization error"})
-//     } else {
-//         const {email} = user
-//         try {
-//             const users = await userModel.findOne({email})
-//             if (!users) {
-//             res.status(400).send({message : "Unable to get information"})
-                
-//             } else {
-//                 const findOtp= await userModel.findOne({email})
-//                 res.status(200).send({message : "OTP fetched successfully", status:"okay", findOtp})
-                
-//             }
-//         } catch (error) {
-//             res.status(500).send({message : "Internal server error"})
-            
-//         }
-//     }
-
-// }
-
 const editPassword = async (req, res) => {
-    const user = req.user
-    if (!user) {
-        res.status(400).send({message : 'Authorization error'})
+    const {email, password} = req.body
+    if (!email || !password) {
+        res.status(400).send({message : 'All fields are mandatory'})
     } else {
        try {
-        const {password} = req.body
-        const {email} = req.user
-
         const findUser = await userModel.findOne({email})
         if (!findUser) {
-            res.status(400).send({message : 'Unable to edit password'})
-            
+            res.status(400).send({message : 'User does not exist'})
         } else {
             const hashedPassword = await bcryptjs.hash(password, 5)
-
             const newPassword = await userModel.findOneAndUpdate({email}, {
                  password : hashedPassword 
             }, {new : true})
@@ -314,55 +282,6 @@ const getProfile = async (req, res) => {
     }
 }
 
-// const address = async (req, res) => {
-//     const user = req.user
-//     const {email} = user
-
-//     const {city, country, fullAddress} = req.body
-//     if (!city, !country, !fullAddress) {
-//         res.status(400).send({message : 'All fields are mandatory'})
-//     } else {
-//         try {
-//             const addressForm = await userModel.findOneAndUpdate({email}, {
-//                 $set : {city : city, country : country, fullAddress : fullAddress}
-//             }, {new : true})
-
-//             if (!addressForm) {
-//                 res.status(400).send({message : 'Unable to update profile'})
-//             } else {
-//                 res.status(200).send({message : 'Profile updated successfully'})
-//             }
-//         } catch (error) {
-//             res.status(500).send({message : 'Internal server error'})
-            
-//         }
-//     }
-// }
-
-// const social = async (req, res) => {
-//     const user = req.user
-//     const {email} = user
-
-//     const {facebook, x, linkedIn, instagram} = req.body
-//     if (!facebook, !x, !linkedIn, !instagram) {
-//         res.status(400).send({message : 'All fields are mandatory'})
-//     } else {
-//         try {
-//             const socialForm = await userModel.findOneAndUpdate({email}, {
-//                 $set : {facebook : facebook, x : x, linkedIn : linkedIn , instagram : instagram}
-//             }, {new : true})
-
-//             if (!socialForm) {
-//                 res.status(400).send({message : 'Unable to update profile'})
-//             } else {
-//                 res.status(200).send({message : 'Profile updated successfully'})
-//             }
-//         } catch (error) {
-//             res.status(500).send({message : 'Internal server error'})
-            
-//         }
-//     }
-// }
 
 
 
