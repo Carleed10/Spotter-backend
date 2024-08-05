@@ -1,16 +1,16 @@
 const mongoose = require('mongoose')
-const { Schema } = require('yup')
+const { Schema, ref } = require('yup')
 const userModel = require('./userModel')
 
 const jobSchema = new mongoose.Schema({
         jobTitle: {
-        type : String,
-        require : [true, 'Jobtitle is required']
+            type : String,
+            require : [true, 'Jobtitle is required']
         },
 
         jobCategory : {
             type : String,
-            enum: ['Software Development' , 'Data Processing', 'Cloud Computing' , 'Networking', 'Web Development', 'Game Development', 'Database Management', 'Emerging Technologies', 'Product Management', 'IT Consulting', 'IT Governance and Compliance', 'Telecommunications', 'Cloud Computing', 'Ghostwriting', '', 'Database Management', 'Public Relations', 'Copywriting'],
+            enum: ['Software Development', 'Data Processing', 'Cloud Computing' , 'Networking', 'Web Development', 'Game Development', 'Database Management', 'Emerging Technologies', 'Product Management', 'IT Consulting', 'IT Governance and Compliance', 'Telecommunications', 'Cloud Computing', 'Ghostwriting', 'Database Management', 'Public Relations', 'Copywriting'],
             require : [true, 'JobCategory is required']
         },
 
@@ -58,8 +58,17 @@ const jobSchema = new mongoose.Schema({
             accepted: {
                 type: Boolean,
                 default: false
+            },
+            status : {
+                type : String,
+                default : 'Pending'
             }
         }],
+        creator : {
+            type : mongoose.Schema.Types.ObjectId,
+            ref : 'userSchema',
+        },
+        
           
 
         timestamp : {type: Date, default : Date.now}       

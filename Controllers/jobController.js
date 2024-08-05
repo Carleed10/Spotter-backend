@@ -1,4 +1,5 @@
 const jobModel = require("../Models/jobModel")
+const notificationModel = require("../Models/notificationModel")
 const userModel = require("../Models/userModel")
 
 
@@ -28,12 +29,23 @@ const jobController = async (req, res) => {
                 salary, 
                 jobDescription, 
                 requirement,
-                email : email
+                email : email,
+                creator : users._id,
+               
             })
             if (!createJob) {
                 res.status(400).send({message : 'Error'})
             } else {
-                res.status(200).send({message : 'Job created successfully', users : users.email})
+                const notify = await notificationModel.create({
+                    notificationUser : users._id,
+                    notificationMessage : `Your job ${jobTitle} job has been posted successfully.`
+                })
+                if (!notify) {
+                    res.status(403).send({message : 'Unable to send notification', users : users.email, creator : users._id})        
+                } else {
+                    res.status(200).send({message : 'Job created successfully with notification', users : users.email, notify, creator : users._id})              
+                }
+
                 
             }
            }
@@ -136,56 +148,79 @@ const createdJob = async (req, res) => {
 }
 
 const applyJob = async (req, res) => {
-    const user = req.user.email
+    const user = req.user.email;
     console.log(user);
+    const creator = req.user.id
+
 
     if (!user) {
-        res.status(400).send({message : 'Authorisation not provided'})
-    } else {
-        try {
-            const {email} = req.user
-        const apply =  await userModel.findOne({email})
-        if (!apply) {
-            res.status(400).send({message : "User not found"}) 
-            } else {               
-                const id = req.params.id
-                if (!id) {
-                  res.status(400).send({message:'id is not provided'})
-                } else {
-                    const jobApplication = await jobModel.findByIdAndUpdate(
-                        id,
-                        { $push: { applicants: { userId: apply._id} } },
-                        { new: true}
-                    )
-                const userId = apply._id
-                console.log(userId);
-                if (!jobApplication) {
-                    res.status(400).send({message : "Unable to apply for job"})
-                    console.log(error);
-                } else {
-                    try {
-                        if (jobApplication.applicants.length >= jobApplication.vacancies) {
-                            return res.status(404).send({ message: 'Job vacancy is full, cannot apply' });
-                        }else if (jobApplication.applicants.map(applicant => applicant.toString()).includes(userId.toString())) {
-                            return res.status(402).send({ message: 'You have already applied for this job' });
-                        }else{
-                        res.status(200).send({message : "Job applied for successfully", status:"okay", jobApplication})
-
-                        }
-
-                    } catch (error) {
-                        console.log(error);
-                        res.status(500).send({message : "Internal server error"})
-                    }
-                }
-                }              
-            }
-        } catch (error) {
-            res.status(500).send({message : "Internal server error"})
-            console.log(error);
-        }
+        return res.status(400).send({ message: 'Authorization not provided' });
     }
-}
+
+    try {
+        const { email } = req.user;
+        const apply = await userModel.findOne({ email });
+
+        if (!apply) {
+            return res.status(400).send({ message: "User not found" });
+        }
+
+        
+        const id = req.params.id;
+        if (!id) {
+            return res.status(400).send({ message: 'Job ID is not provided' });
+        }
+
+        const jobApplication = await jobModel.findById(id).populate('creator');
+
+        if (!jobApplication) {
+            return res.status(400).send({ message: "Unable to get job" });
+        }
+
+        else if (jobApplication.creator._id.toString() === apply._id.toString()) {
+            return res.status(403).send({ message: 'You cannot apply for your own job' });
+
+        }
+        else if (jobApplication.applicants.length >= jobApplication.vacancies) {
+            return res.status(404).send({ message: 'Job vacancy is full, cannot apply' });
+        }else{
+            const applicantIds = jobApplication.applicants.map(applicant => applicant.userId.toString());
+            if (applicantIds.includes(apply._id.toString())) {
+            return res.status(402).send({ message: 'You have already applied for this job' });
+            }else{
+                const updateApplicant = await jobModel.findByIdAndUpdate(
+                    id,
+                    { $push: { applicants: { userId: apply._id } } },
+                    { new: true }
+                ).populate('creator');
+
+                if (!updateApplicant) {
+                    res.status(402).send({ message: 'Unable to apply for job' });
+                } else {
+                    const notify = await notificationModel.create({
+                        notificationUser : creator,
+                        notificationMessage : `A new applicant has applied for your job posting titled ${jobApplication.jobTitle}`
+                    })
+                    if (!notify) {
+                        res.status(403).send({message : 'Unable to send notification', creator})        
+                    } else {
+                        res.status(201).send({message : 'Job applied for successfully with notification', deleteJob, notify, creator})              
+                    }
+
+                    // res.status(201).send({ message: 'Job applied for successfully' });
+                    
+                }
+            
+        }
+        }
+
+        
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ message: "Internal server error" });
+    }
+};
 
 const appliedJob = async (req, res) => {
     const user = req.user.email
@@ -206,7 +241,7 @@ const appliedJob = async (req, res) => {
                 if (!appliedJobs) {
                 res.status(404).send({message : "Unable to get applied jobs"})
                 } else {
-                    res.status(200).send({message : "Success", appliedJobs})
+                    res.status(200).send({message : "Success",  appliedJobs})
                 }
                 
             }
@@ -241,7 +276,7 @@ const applicants = async (req, res) => {
                              res.status(404).send({message : "Unable to get id"})
                         
                     } else {
-                         const appli = await jobModel.findById(id).populate('applicants.userId', "userName firstName lastName jobTitle")
+                         const appli = await jobModel.findById(id).populate('applicants.userId', "userName firstName imageUrl lastName jobTitle")
                          console.log(appli);
                          if (!appli) {
                             res.status(404).send({message : "Unable to get applicants"})
@@ -267,9 +302,7 @@ const applicants = async (req, res) => {
 const applicantsProfile = async (req, res) => {
     const user = req.user.email
     console.log(user);
-    // const {applicantId}  = req.body
     
-
     if (!user) {
         res.status(400).send({message : 'Authorisation not provided'})
     } else {
@@ -314,6 +347,7 @@ const applicantsProfile = async (req, res) => {
 
 const deleteJob = async (req, res) =>{
     const user = req.user.email
+    const creator = req.user.id
     console.log(user);
 
     if (!user) {
@@ -330,7 +364,16 @@ const deleteJob = async (req, res) =>{
                 if (!deleteJob) {
                 res.status(404).send({message : "Unable to delete job"})
                 } else {
-                    res.status(200).send({message : "Job deleted Successfully", deleteJob})
+                    const notify = await notificationModel.create({
+                    notificationUser : creator,
+                    notificationMessage : `The job you created titled ${deleteJob.jobTitle} has been successfully deleted.`
+                })
+                if (!notify) {
+                    res.status(403).send({message : 'Unable to send notification', creator})        
+                } else {
+                    res.status(200).send({message : 'Job deleted Successfully with notification', deleteJob, notify, creator})              
+                }
+                    // res.status(200).send({message : "", deleteJob})
                 }
                 
             }
@@ -341,10 +384,10 @@ const deleteJob = async (req, res) =>{
     }
 }
 
-
-
 const acceptApplicants = async (req, res) => {
     const user =  req.user.email
+    const creator = req.user.id
+
     console.log(user);
     const {applicantId}  = req.body
     const id = req.params.id
@@ -360,11 +403,11 @@ const acceptApplicants = async (req, res) => {
                 res.status(404).send({message : "Not authorised to accept applicant"})
             } else {
 
-                
+                    
 
                     const applicant = await jobModel.findOneAndUpdate(
                         { _id: id, 'applicants.userId': applicantId },
-                        { $set: { 'applicants.$.accepted': true }},
+                        { $set: { 'applicants.$.accepted': true, 'applicants.$.status' : 'Accepted' }},
                         {new: true}
                     )
                     console.log(applicant);
@@ -373,7 +416,24 @@ const acceptApplicants = async (req, res) => {
                     res.status(404).send({message : "Applicant not found for this job"})
                         
                     }else{
-                    res.status(200).send({message : "Applicant accepted successfully"})
+                        const notifyUser = await notificationModel.create({
+                            notificationUser : creator,
+                            notificationMessage : `You've accepted an applicant`,
+
+                        })
+                        const notifyApplicant = await notificationModel.create({
+                            notificationUser : applicantId,
+                            notificationMessage : `Congratulations! You have been successfully accepted for the ${applicant.jobTitle} job position.`,
+             
+                        })
+                        if (!notifyUser || !notifyApplicant) {
+                            res.status(403).send({message : 'Unable to send notification', creator})        
+                        } else {
+                            res.status(200).send({message : 'Applicant accepted successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
+                        }
+
+
+                    // res.status(200).send({message : "Applicant accepted successfully"})
                         
                     }
                 
@@ -390,6 +450,8 @@ const declineApplicants = async (req, res) => {
     console.log(user);
     const {applicantId}  = req.body
     const id = req.params.id
+    const creator = req.user.id
+
 
 
     if (!user) {
@@ -404,7 +466,7 @@ const declineApplicants = async (req, res) => {
 
                     const applicant = await jobModel.findOneAndUpdate(
                         { _id: id, 'applicants.userId': applicantId },
-                        { $set: { 'applicants.$.accepted': false }},
+                        { $set: { 'applicants.$.accepted': false, 'applicants.$.status' : 'Declined' }},
                         {new: false}
                     )
                     console.log(applicant);
@@ -413,7 +475,38 @@ const declineApplicants = async (req, res) => {
                     res.status(404).send({message : "Applicant not found for this job"})
                         
                     }else{
-                    res.status(200).send({message : "Applicant declined successfully"})
+                        const notifyUser = await notificationModel.create({
+                            notificationUser : creator,
+                            notificationMessage : `Notification for success, deleted successfully`,
+
+                        })
+                        const notifyApplicant = await notificationModel.create({
+                            notificationUser : applicantId,
+                            notificationMessage : `We regret to inform you that your application for the ${applicant.jobTitle} position has been declined. Thank you for your interest and effort. We encourage you to apply for other opportunities that match your skills and experience. Best of luck in your job search.`,
+             
+                        })
+                        if (!notifyUser || !notifyApplicant) {
+                            res.status(403).send({message : 'Unable to send notification', creator})        
+                        } else {
+                            res.status(200).send({message : 'Applicant accepted successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
+                        }
+                        if (!notifyUser || !notifyApplicant) {
+                            res.status(403).send({message : 'Unable to send notification', creator})        
+                        } else {
+                            const deleteApplicant = await jobModel.findOneAndDelete(
+                                { _id: id },
+                                { $pull: { applicants: { userId: applicantId } } },
+                                { new: true }
+                            )
+                            if (!deleteApplicant) {
+                                res.status(403).send({message : 'Unable to decline applicant', creator})          
+                            }else{
+                            res.status(200).send({message : 'Applicant declined successfully with notification', applicant, notify, creator})              
+                                
+                            }
+                        }
+
+                    // res.status(200).send({message : "Applicant declined successfully"})
                         
                     }
                 

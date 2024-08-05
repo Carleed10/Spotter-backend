@@ -5,6 +5,8 @@ const { Signupmail } = require('../Utils/Signupmail')
 const { Deletemail } = require('../Utils/Deletemail')
 const crypto = require('crypto')
 const { Otpmail } = require('../Utils/Otpmail')
+const jobModel = require('../Models/jobModel')
+const { cloudinary } = require('../Config/cloudinary')
 
 
 // const genRandom = () => {
@@ -86,7 +88,7 @@ const login = async (req, res)=>{
                     
                 } else {
                     const genToken = jwt.sign({
-                        user : {userName:findUser.userName, email}
+                        user : {userName:findUser.userName, email, id : findUser._id}
                     },
                     secretKey,{
                         expiresIn : '1d'
@@ -207,6 +209,8 @@ const editPassword = async (req, res) => {
 }
 
 
+
+
 const deleteAccount = async (req, res) =>{
     const user = req.user
     if (!user) {
@@ -218,6 +222,7 @@ const deleteAccount = async (req, res) =>{
             const findUser = await userModel.findOneAndDelete({email})
 
             if (findUser) {
+                await jobModel.deleteMany({creator : findUser._id})
                 await Deletemail(userName, email)
                 res.status(200).send({message : 'Account deleted successfully'})
                 console.log('Deleted user : ',  findUser);
@@ -284,5 +289,35 @@ const getProfile = async (req, res) => {
 
 
 
+const image = async (req, res) => {
+    const user = req.user;
+    console.log(user.email);
+    const { email } = user;
+    const { imageUrl } = req.body;
 
-module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, verifyOtp, getProfile}
+    if (!imageUrl) {
+        return res.status(400).send({ message: 'Image is required' });
+    }
+
+    try {
+        const imageUpload = await cloudinary.uploader.upload(imageUrl, { folder: 'Profile image' });
+        const imageLink = imageUpload.secure_url;
+
+        const imageForm = await userModel.findOneAndUpdate({ email }, {
+            $set: { imageUrl : imageLink }
+        }, { new: true });
+
+        if (!imageForm) {
+            return res.status(400).send({ message: "Unable to update image" });
+        }
+
+        res.status(200).send({ message: "Profile updated successfully", imageForm, imageLink});
+    } catch (error) {
+        res.status(500).send({ message: 'Internal server error' });
+        console.log(error);
+    }
+};
+
+
+
+module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, verifyOtp, image, getProfile}

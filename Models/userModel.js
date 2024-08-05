@@ -88,7 +88,12 @@ const userSchema = new mongoose.Schema({
     resetOtp: {
         code: { type: String },
         expiresAt: { type: Date }
+    },
+    imageUrl : {
+        type : String,
+        default : null
     }
+
 })
 
 
