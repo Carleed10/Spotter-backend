@@ -92,8 +92,11 @@ const userSchema = new mongoose.Schema({
     imageUrl : {
         type : String,
         default : null
+    },
+    resumeUrl : {
+        type : String,
+        default : null
     }
-
 })
 
 

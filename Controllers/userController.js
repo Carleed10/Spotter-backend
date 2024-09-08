@@ -293,7 +293,7 @@ const image = async (req, res) => {
     const user = req.user;
     console.log(user.email);
     const { email } = user;
-    const { imageUrl } = req.body;
+    const { resume } = req.body;
 
     if (!imageUrl) {
         return res.status(400).send({ message: 'Image is required' });
@@ -316,8 +316,36 @@ const image = async (req, res) => {
         res.status(500).send({ message: 'Internal server error' });
         console.log(error);
     }
-};
+}
+
+const resume = async (req, res) => {
+    const user = req.user;
+    console.log(user.email);
+    const { email } = user;
+    const { resume } = req.body;
+
+    if (!resume) {
+        return res.status(400).send({ message: 'Resume is required' });
+    }
+
+    try {
+        const resumeUpload = await cloudinary.uploader.upload(resume, { folder: 'Profile resume' });
+        const resumeLink = resumeUpload.secure_url;
+
+        const resumeForm = await userModel.findOneAndUpdate({ email }, {
+            $set: { resume : resumeLink }
+        }, { new: true });
+
+        if (!resumeForm) {
+            return res.status(400).send({ message: "Unable to update resume" });
+        }
+
+        res.status(200).send({ message: "Profile updated successfully", resumeForm, resumeLink});
+    } catch (error) {
+        res.status(500).send({ message: 'Internal server error' });
+        console.log(error);
+    }
+}
 
 
-
-module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, verifyOtp, image, getProfile}
+module.exports = {signUp, login, deleteAccount, profile, forgotPassword, editPassword, verifyOtp, resume, image, getProfile}
