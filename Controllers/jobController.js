@@ -253,6 +253,76 @@ const appliedJob = async (req, res) => {
 
 }
 
+
+const pendingJobs = async (req, res) => {
+    const user = req.user.email
+    console.log(user);
+
+    if (!user) {
+        res.status(400).send({message : 'Authorisation not provided'})
+    } else {
+        try {
+            const {email} = req.user
+            const applied =  await userModel.findOne({email})
+        // console.log(applied);
+            if (!applied) {
+                res.status(404).send({message : "Unable to find job"})
+            } else {
+                const pendingJobs = await jobModel.find({ 'applicants.userId': applied._id, 'applicants.status' : 'Pending' }).populate("applicants.userId", "username")
+                console.log(pendingJobs);
+                if (!pendingJobs) {
+                res.status(404).send({message : "Unable to get pending jobs"})
+                } else {
+                    res.status(200).send({message : "Success", pendingJobs : pendingJobs.length})
+                }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
+
+}
+
+
+const approvedJobs = async (req, res) => {
+    const user = req.user.email
+    console.log(user);
+
+    if (!user) {
+        res.status(400).send({message : 'Authorisation not provided'})
+    } else {
+        try {
+            const {email} = req.user
+            const applied =  await userModel.findOne({email})
+        // console.log(applied);
+            if (!applied) {
+                res.status(404).send({message : "Unable to find job"})
+            } else {
+                const approvedJobs = await jobModel.find({ 'applicants.userId': applied._id, 'applicants.status' : 'Accepted' }).populate("applicants.userId", "username")
+                console.log(approvedJobs);
+                if (!approvedJobs) {
+                res.status(404).send({message : "Unable to get approved jobs"})
+                } else {
+                    res.status(200).send({message : "Success", approvedJobs : approvedJobs.length})
+                }
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            console.log(error);
+        }
+    }
+
+}
+
+
+
+
+
+
+
 const applicants = async (req, res) => {
     const user = req.user.email
     console.log(user);
@@ -522,6 +592,6 @@ const declineApplicants = async (req, res) => {
 
 
 
-module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, applicantsProfile, acceptApplicants, declineApplicants}
+module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, pendingJobs, approvedJobs, applicantsProfile, acceptApplicants, declineApplicants}
 
 

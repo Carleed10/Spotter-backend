@@ -293,7 +293,7 @@ const image = async (req, res) => {
     const user = req.user;
     console.log(user.email);
     const { email } = user;
-    const { resume } = req.body;
+    const { imageUrlcc } = req.body;
 
     if (!imageUrl) {
         return res.status(400).send({ message: 'Image is required' });
@@ -322,18 +322,18 @@ const resume = async (req, res) => {
     const user = req.user;
     console.log(user.email);
     const { email } = user;
-    const { resume } = req.body;
+    const { resumeUrl } = req.body;
 
-    if (!resume) {
+    if (!resumeUrl) {
         return res.status(400).send({ message: 'Resume is required' });
     }
 
     try {
-        const resumeUpload = await cloudinary.uploader.upload(resume, { folder: 'Profile resume' });
+        const resumeUpload = await cloudinary.uploader.upload(resumeUrl, { folder: 'Profile resume' });
         const resumeLink = resumeUpload.secure_url;
 
         const resumeForm = await userModel.findOneAndUpdate({ email }, {
-            $set: { resume : resumeLink }
+            $set: { resumeUrl : resumeLink }
         }, { new: true });
 
         if (!resumeForm) {
