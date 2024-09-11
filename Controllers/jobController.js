@@ -1,63 +1,119 @@
 const jobModel = require("../Models/jobModel")
 const notificationModel = require("../Models/notificationModel")
 const userModel = require("../Models/userModel")
+const { cloudinary } = require('../Config/cloudinary')
+
 
 
 const jobController = async (req, res) => {
-    const user = req.user
+    const user = req.user;
 
     if (!user) {
-        res.status(400).send({message : "Authorization error"})
-    } else {
-        const {email} = user
-        const {jobTitle, jobCategory,  companyName, vacancies, jobType, salary, jobDescription, requirement} = req.body
+        return res.status(400).send({ message: "Authorization error" });
+    }
 
-    if (!jobTitle || !jobCategory || !companyName || !vacancies || !jobType || !salary || !jobDescription || !requirement) {
-        res.status(400).send({message : 'All fields are mandatory'})
-    } else {
-        try {
-            const users = await userModel.findOne({email})
-           if (!users) {
-                res.status(400).send({message : 'Not eligible to post job'})
-           } else { 
-            const createJob = await jobModel.create({
-                jobTitle, 
-                jobCategory,  
-                companyName,
-                vacancies, 
-                jobType, 
-                salary, 
-                jobDescription, 
-                requirement,
-                email : email,
-                creator : users._id,
-               
-            })
-            if (!createJob) {
-                res.status(400).send({message : 'Error'})
-            } else {
-                const notify = await notificationModel.create({
-                    notificationUser : users._id,
-                    notificationMessage : `Your job ${jobTitle} job has been posted successfully.`
-                })
-                if (!notify) {
-                    res.status(403).send({message : 'Unable to send notification', users : users.email, creator : users._id})        
-                } else {
-                    res.status(200).send({message : 'Job created successfully with notification', users : users.email, notify, creator : users._id})              
-                }
+    const { email } = user;
+    const { jobTitle, jobCategory, companyName, vacancies, jobType, salary, jobDescription, requirement, companyLogoUrl } = req.body;
 
-                
-            }
-           }
-        } catch (error) {
-            res.status(500).send({message : 'Internal server error', status : false})
-            console.log(error)
+    // Ensure all fields are filled, including the company logo
+    if (!jobTitle || !jobCategory || !companyName || !vacancies || !jobType || !salary || !jobDescription || !requirement || !companyLogoUrl) {
+        return res.status(400).send({ message: 'All fields, including the company logo, are mandatory' });
+    }
+
+    try {
+        const users = await userModel.findOne({ email });
+
+        if (!users) {
+            return res.status(400).send({ message: 'Not eligible to post job' });
         }
-    }
 
+        // Upload the company logo to Cloudinary
+        const companyLogoUpload = await cloudinary.uploader.upload(companyLogoUrl, {
+            folder: 'Company Logos'
+        });
+
+        const companyLogoLink = companyLogoUpload.secure_url; // Get secure URL from the Cloudinary upload
+
+        // Create the job with the uploaded company logo URL
+        const createJob = await jobModel.create({
+            jobTitle,
+            jobCategory,
+            companyName,
+            vacancies,
+            jobType,
+            salary,
+            jobDescription,
+            requirement,
+            email: email,
+            creator: users._id,
+            companyLogo: companyLogoLink, // Save the uploaded company logo URL
+        });
+
+        if (!createJob) {
+            return res.status(400).send({ message: 'Error creating job' });
+        }
+
+        // Create a notification for the user
+        const notify = await notificationModel.create({
+            notificationUser: users._id,
+            notificationMessage: `Your job ${jobTitle} has been posted successfully with the company logo.`,
+        });
+
+        if (!notify) {
+            return res.status(403).send({ message: 'Unable to send notification', users: users.email, creator: users._id });
+        }
+
+        res.status(200).send({ message: 'Job created successfully with the company logo and notification', users: users.email, notify, companyLogoLink });
+
+    } catch (error) {
+        res.status(500).send({ message: 'Internal server error', status: false });
+        console.log(error);
     }
-    
-}
+};
+
+
+
+
+// const companyLogo = async (req, res) => {
+//     const user = req.user;
+//     console.log(user.email);
+//     const { email } = user;
+//     const { companyLogoUrl } = req.body;rs
+
+//     if (!companyLogoUrl) {
+//         return res.status(400).send({ message: 'companyLogo is required' });
+//     }
+
+//     try {
+//         const companyLogoUpload = await cloudinary.uploader.upload(companyLogoUrl, { folder: 'Profile companyLogo' });
+//         const companyLogoLink = companyLogoUpload.secure_url;
+
+//         const companyLogoForm = await userModel.findOneAndUpdate({ email }, {
+//             $set: { companyLogoUrl : companyLogoLink }
+//         }, { new: true });
+
+//         if (!companyLogoForm) {
+//             return res.status(400).send({ message: "Unable to update companyLogo" });
+//         }
+
+//         res.status(200).send({ message: "Profile updated successfully", companyLogoForm, companyLogoLink});
+//     } catch (error) {
+//         res.status(500).send({ message: 'Internal server error' });
+//         console.log(error);
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
 
 const getJob = async (req, res)=>{
     const user = req.user
@@ -84,6 +140,94 @@ const getJob = async (req, res)=>{
 
      
 }
+
+
+const partTimeJob = async (req, res)=>{
+    const user = req.user
+    if (!user) {
+        res.status(400).send({message : "Authorization error"})
+    } else {
+        const {email} = user
+        try {
+            const users = await userModel.findOne({email})
+            if (!users) {
+            res.status(400).send({message : "Unable to get jobs"})
+                
+            } else {
+                const partTimeJob = await jobModel.find({"jobType" : "Part-time"})
+                res.status(200).send({message : "Jobs fetched successfully", status:"okay", partTimeJob : partTimeJob.length})
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            
+        }
+    }
+
+
+     
+}
+
+
+const fullTimeJob = async (req, res)=>{
+    const user = req.user
+    if (!user) {
+        res.status(400).send({message : "Authorization error"})
+    } else {
+        const {email} = user
+        try {
+            const users = await userModel.findOne({email})
+            if (!users) {
+            res.status(400).send({message : "Unable to get jobs"})
+                
+            } else {
+                const fullTimeJob = await jobModel.find({"jobType" : "Full-time"})
+                res.status(200).send({message : "Jobs fetched successfully", status:"okay", fullTimeJob : partTimeJob.length})
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            
+        }
+    }
+
+
+     
+}
+
+
+const internship = async (req, res)=>{
+    const user = req.user
+    if (!user) {
+        res.status(400).send({message : "Authorization error"})
+    } else {
+        const {email} = user
+        try {
+            const users = await userModel.findOne({email})
+            if (!users) {
+            res.status(400).send({message : "Unable to get jobs"})
+                
+            } else {
+                const internship = await jobModel.find({"jobType" : "Internship"})
+                res.status(200).send({message : "Jobs fetched successfully", status:"okay", internship : partTimeJob.length})
+                
+            }
+        } catch (error) {
+            res.status(500).send({message : "Internal server error"})
+            
+        }
+    }
+
+
+     
+}
+
+
+
+
+
+
+
 
 const jobDetails = async (req, res)=>{
     const user = req.user
@@ -592,6 +736,6 @@ const declineApplicants = async (req, res) => {
 
 
 
-module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, pendingJobs, approvedJobs, applicantsProfile, acceptApplicants, declineApplicants}
+module.exports = {jobController, getJob, jobDetails, createdJob, applyJob, deleteJob, appliedJob, applicants, partTimeJob, pendingJobs, internship, fullTimeJob, approvedJobs, applicantsProfile, acceptApplicants, declineApplicants}
 
 

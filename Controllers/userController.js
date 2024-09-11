@@ -293,7 +293,7 @@ const image = async (req, res) => {
     const user = req.user;
     console.log(user.email);
     const { email } = user;
-    const { imageUrlcc } = req.body;
+    const { imageUrl } = req.body;
 
     if (!imageUrl) {
         return res.status(400).send({ message: 'Image is required' });

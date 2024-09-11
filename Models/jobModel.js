@@ -49,6 +49,11 @@ const jobSchema = new mongoose.Schema({
             require : [true, 'Email is required'],
             // unique : true
         },
+        companyLogo: {
+            type : String,
+            require : [true, 'Company Logo is required'],
+            // unique : true
+        },
         applicants: [{
             userId: {
                 type: mongoose.Schema.Types.ObjectId,
