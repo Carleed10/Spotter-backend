@@ -620,7 +620,6 @@ const acceptApplicants = async (req, res) => {
             } else {
 
                     
-
                     const applicant = await jobModel.findOneAndUpdate(
                         { _id: id, 'applicants.userId': applicantId },
                         { $set: { 'applicants.$.accepted': true, 'applicants.$.status' : 'Accepted' }},
@@ -704,7 +703,7 @@ const declineApplicants = async (req, res) => {
                         if (!notifyUser || !notifyApplicant) {
                             res.status(403).send({message : 'Unable to send notification', creator})        
                         } else {
-                            res.status(200).send({message : 'Applicant accepted successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
+                            res.status(200).send({message : 'Applicant declined successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
                         }
                         if (!notifyUser || !notifyApplicant) {
                             res.status(403).send({message : 'Unable to send notification', creator})        
