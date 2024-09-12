@@ -293,9 +293,7 @@ const createdJob = async (req, res) => {
 
 const applyJob = async (req, res) => {
     const user = req.user.email;
-    console.log(user);
-    const creator = req.user.id
-
+    const creator = req.user.id;
 
     if (!user) {
         return res.status(400).send({ message: 'Authorization not provided' });
@@ -309,7 +307,15 @@ const applyJob = async (req, res) => {
             return res.status(400).send({ message: "User not found" });
         }
 
-        
+        // Check if required profile fields are set
+        // Adjust these fields based on your application's requirements
+        const requiredFields = ['firstName', 'lastName', 'resumeUrl']; // Example fields
+        const missingFields = requiredFields.filter(field => !apply[field]);
+
+        if (missingFields.length > 0) {
+            return res.status(400).send({ message: `Please complete your profile. Missing fields: ${missingFields.join(', ')}` });
+        }
+
         const id = req.params.id;
         if (!id) {
             return res.status(400).send({ message: 'Job ID is not provided' });
@@ -321,50 +327,46 @@ const applyJob = async (req, res) => {
             return res.status(400).send({ message: "Unable to get job" });
         }
 
-        else if (jobApplication.creator._id.toString() === apply._id.toString()) {
+        if (jobApplication.creator._id.toString() === apply._id.toString()) {
             return res.status(403).send({ message: 'You cannot apply for your own job' });
-
         }
-        else if (jobApplication.applicants.length >= jobApplication.vacancies) {
+
+        if (jobApplication.applicants.length >= jobApplication.vacancies) {
             return res.status(404).send({ message: 'Job vacancy is full, cannot apply' });
-        }else{
-            const applicantIds = jobApplication.applicants.map(applicant => applicant.userId.toString());
-            if (applicantIds.includes(apply._id.toString())) {
+        }
+
+        const applicantIds = jobApplication.applicants.map(applicant => applicant.userId.toString());
+        if (applicantIds.includes(apply._id.toString())) {
             return res.status(402).send({ message: 'You have already applied for this job' });
-            }else{
-                const updateApplicant = await jobModel.findByIdAndUpdate(
-                    id,
-                    { $push: { applicants: { userId: apply._id } } },
-                    { new: true }
-                ).populate('creator');
-
-                if (!updateApplicant) {
-                    res.status(402).send({ message: 'Unable to apply for job' });
-                } else {
-                    const notify = await notificationModel.create({
-                        notificationUser : creator,
-                        notificationMessage : `A new applicant has applied for your job posting titled ${jobApplication.jobTitle}`
-                    })
-                    if (!notify) {
-                        res.status(403).send({message : 'Unable to send notification', creator})        
-                    } else {
-                        res.status(201).send({message : 'Job applied for successfully with notification', deleteJob, notify, creator})              
-                    }
-
-                    // res.status(201).send({ message: 'Job applied for successfully' });
-                    
-                }
-            
-        }
         }
 
-        
+        const updateApplicant = await jobModel.findByIdAndUpdate(
+            id,
+            { $push: { applicants: { userId: apply._id } } },
+            { new: true }
+        ).populate('creator');
+
+        if (!updateApplicant) {
+            return res.status(402).send({ message: 'Unable to apply for job' });
+        } else {
+            const notify = await notificationModel.create({
+                notificationUser: creator,
+                notificationMessage: `A new applicant has applied for your job posting titled ${jobApplication.jobTitle}`
+            });
+
+            if (!notify) {
+                return res.status(403).send({ message: 'Unable to send notification', creator });
+            } else {
+                return res.status(201).send({ message: 'Job applied for successfully with notification', notify, creator });
+            }
+        }
 
     } catch (error) {
         console.error(error);
         return res.status(500).send({ message: "Internal server error" });
     }
 };
+
 
 const appliedJob = async (req, res) => {
     const user = req.user.email
