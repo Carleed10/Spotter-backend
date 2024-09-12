@@ -329,7 +329,7 @@ const resume = async (req, res) => {
     }
 
     try {
-        const resumeUpload = await cloudinary.uploader.upload(resumeUrl, { folder: 'Profile resume' });
+        const resumeUpload = await cloudinary.uploader.upload(resumeUrl, { folder: 'Profile resume', resource_type: 'raw' });
         const resumeLink = resumeUpload.secure_url;
 
         const resumeForm = await userModel.findOneAndUpdate({ email }, {
