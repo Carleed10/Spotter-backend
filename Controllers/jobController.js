@@ -351,13 +351,13 @@ const applyJob = async (req, res) => {
         } else {
             const notify = await notificationModel.create({
                 notificationUser: creator,
-                notificationMessage: `A new applicant has applied for your job posting titled ${jobApplication.jobTitle}`
+                notificationMessage: `You've applied for a new job titled ${jobApplication.jobTitle}`
             });
 
             if (!notify) {
                 return res.status(403).send({ message: 'Unable to send notification', creator });
             } else {
-                return res.status(201).send({ message: 'Job applied for successfully with notification', notify, creator });
+                return res.status(201).send({ message: 'Job applied for successfully', notify, creator });
             }
         }
 
@@ -587,7 +587,7 @@ const deleteJob = async (req, res) =>{
                 if (!notify) {
                     res.status(403).send({message : 'Unable to send notification', creator})        
                 } else {
-                    res.status(200).send({message : 'Job deleted Successfully with notification', deleteJob, notify, creator})              
+                    res.status(200).send({message : 'Job deleted Successfully', deleteJob, notify, creator})              
                 }
                     // res.status(200).send({message : "", deleteJob})
                 }
@@ -644,7 +644,7 @@ const acceptApplicants = async (req, res) => {
                         if (!notifyUser || !notifyApplicant) {
                             res.status(403).send({message : 'Unable to send notification', creator})        
                         } else {
-                            res.status(200).send({message : 'Applicant accepted successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
+                            res.status(200).send({message : 'Applicant accepted successfully', applicant, notifyUser, notifyApplicant, creator})              
                         }
 
 
@@ -703,7 +703,7 @@ const declineApplicants = async (req, res) => {
                         if (!notifyUser || !notifyApplicant) {
                             res.status(403).send({message : 'Unable to send notification', creator})        
                         } else {
-                            res.status(200).send({message : 'Applicant declined successfully with notification', applicant, notifyUser, notifyApplicant, creator})              
+                            res.status(200).send({message : 'Applicant declined successfully', applicant, notifyUser, notifyApplicant, creator})              
                         }
                         if (!notifyUser || !notifyApplicant) {
                             res.status(403).send({message : 'Unable to send notification', creator})        
@@ -716,7 +716,7 @@ const declineApplicants = async (req, res) => {
                             if (!deleteApplicant) {
                                 res.status(403).send({message : 'Unable to decline applicant', creator})          
                             }else{
-                            res.status(200).send({message : 'Applicant declined successfully with notification', applicant, notify, creator})              
+                            res.status(200).send({message : 'Applicant declined successfully', applicant, notify, creator})              
                                 
                             }
                         }
